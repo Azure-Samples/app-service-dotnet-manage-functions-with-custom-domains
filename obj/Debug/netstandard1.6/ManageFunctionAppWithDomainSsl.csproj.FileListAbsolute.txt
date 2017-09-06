@@ -1,2 +1,0 @@
-C:\Sources\dotnet-samples\app-service-dotnet-manage-functions-with-custom-domains\bin\Debug\netstandard1.6\ManageFunctionAppWithDomainSsl.deps.json
-C:\Sources\dotnet-samples\app-service-dotnet-manage-functions-with-custom-domains\obj\Debug\netstandard1.6\ManageFunctionAppWithDomainSsl.csproj.CoreCompileInputs.cache

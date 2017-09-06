@@ -1,4 +1,0 @@
-C:\Sources\dotnet-samples\app-service-dotnet-manage-functions-with-custom-domains\bin\Debug\net452\ManageFunctionAppWithDomainSsl.runtimeconfig.json
-C:\Sources\dotnet-samples\app-service-dotnet-manage-functions-with-custom-domains\bin\Debug\net452\ManageFunctionAppWithDomainSsl.runtimeconfig.dev.json
-C:\Sources\dotnet-samples\app-service-dotnet-manage-functions-with-custom-domains\obj\Debug\net452\ManageFunctionAppWithDomainSsl.csproj.ManageFunctionAppWithDomainSsl.exe.config
-C:\Sources\dotnet-samples\app-service-dotnet-manage-functions-with-custom-domains\obj\Debug\net452\ManageFunctionAppWithDomainSsl.csproj.CoreCompileInputs.cache
