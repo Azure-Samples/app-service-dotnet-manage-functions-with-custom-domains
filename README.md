@@ -1,10 +1,10 @@
 ---
-services: App
-platforms: .Net
+services: App-Service
+platforms: dotnet
 author: jianghaolu
 ---
 
-# Getting Started with App - Manage Function App With Domain Ssl - in .Net #
+# Getting started on managing Functions with custom domains using C# #
 
           Azure App Service sample for managing function apps.
            - app service plan, function app
@@ -20,7 +20,7 @@ author: jianghaolu
 
 To run this sample:
 
-Set the environment variable `AZURE_AUTH_LOCATION` with the full path for an auth file. See [how to create an auth file](https://github.com/Azure/azure-sdk-for-net/blob/Fluent/AUTH.md).
+Set the environment variable `AZURE_AUTH_LOCATION` with the full path for an auth file. See [how to create an auth file](https://github.com/Azure/azure-libraries-for-java/blob/master/AUTH.md).
 
     git clone https://github.com/Azure-Samples/app-service-dotnet-manage-functions-with-custom-domains.git
 
