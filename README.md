@@ -4,9 +4,7 @@ languages:
 - csharp
 products:
 - azure
-services: App-Service
-platforms: dotnet
-author: yaohaizh
+description: "Azure App Service sample for managing function apps."
 ---
 
 # Getting started on managing Functions with custom domains using C# #
