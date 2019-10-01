@@ -7,16 +7,16 @@ products:
 description: "Azure App Service sample for managing function apps."
 ---
 
-# Getting started on managing Functions with custom domains using C# #
+# Getting started on managing Functions with custom domains using C#
 
-          Azure App Service sample for managing function apps.
-           - app service plan, function app
-             - Create 2 function apps under the same new app service plan
-           - domain
-             - Create a domain
-           - certificate
-             - Upload a self-signed wildcard certificate
-             - update both function apps to use the domain and the created wildcard SSL certificate
+Azure App Service sample for managing function apps.
+ - app service plan, function app
+   - Create 2 function apps under the same new app service plan
+ - domain
+   - Create a domain
+ - certificate
+   - Upload a self-signed wildcard certificate
+   - update both function apps to use the domain and the created wildcard SSL certificate
 
 
 ## Running this Sample ##
