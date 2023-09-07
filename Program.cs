@@ -41,7 +41,6 @@ namespace ManageFunctionAppWithDomainSsl
             string app2Name       = Utilities.CreateRandomName("webapp2-");
             string rgName         = Utilities.CreateRandomName("rgNEMV_");
             string domainName     = Utilities.CreateRandomName("jsdkdemo-") + ".com";
-            string certPassword   = Utilities.CreatePassword();
             var lro = await client.GetDefaultSubscription().GetResourceGroups().CreateOrUpdateAsync(Azure.WaitUntil.Completed, rgName, new ResourceGroupData(AzureLocation.EastUS));
             var resourceGroup = lro.Value;
 
@@ -54,7 +53,7 @@ namespace ManageFunctionAppWithDomainSsl
                 var webSiteCollection = resourceGroup.GetWebSites();
                 var webSiteData = new WebSiteData(region)
                 {
-                    SiteConfig = new Azure.ResourceManager.AppService.Models.SiteConfigProperties()
+                    SiteConfig = new SiteConfigProperties()
                     {
                         WindowsFxVersion = "PricingTier.StandardS1",
                         NetFrameworkVersion = "NetFrameworkVersion.V4_6",
@@ -67,14 +66,14 @@ namespace ManageFunctionAppWithDomainSsl
                 var planData = new AppServicePlanData(region)
                 {
                 };
-                var planResource_lro = planCollection.CreateOrUpdate(Azure.WaitUntil.Completed, planName, planData);
+                var planResource_lro = await planCollection.CreateOrUpdateAsync(Azure.WaitUntil.Completed, planName, planData);
                 var planResource = planResource_lro.Value;
 
                 SiteFunctionCollection functionAppCollection = webSite.GetSiteFunctions();
                 var functionData = new FunctionEnvelopeData()
                 {
                 };
-                var funtion_lro = functionAppCollection.CreateOrUpdate(Azure.WaitUntil.Completed, app1Name, functionData);
+                var funtion_lro =await functionAppCollection.CreateOrUpdateAsync(Azure.WaitUntil.Completed, app1Name, functionData);
                 var function = funtion_lro.Value;
 
                 Utilities.Log("Created function app " + function.Data.Name);
@@ -88,7 +87,7 @@ namespace ManageFunctionAppWithDomainSsl
                 var function2Data = new FunctionEnvelopeData()
                 {
                 };
-                var funtion2_lro = functionAppCollection.CreateOrUpdate(WaitUntil.Completed, app2Name, function2Data);
+                var funtion2_lro =await function2AppCollection.CreateOrUpdateAsync(WaitUntil.Completed, app2Name, function2Data);
                 var function2 = funtion2_lro.Value;
 
                 Utilities.Log("Created function app " + function2.Data.Name);
@@ -109,7 +108,7 @@ namespace ManageFunctionAppWithDomainSsl
                     IsDomainPrivacyEnabled = true,
                     IsAutoRenew = false
                 };
-                var domain_lro = domainCollection.CreateOrUpdate(WaitUntil.Completed, domainName, domainData);
+                var domain_lro =await domainCollection.CreateOrUpdateAsync(WaitUntil.Completed, domainName, domainData);
                 var domain = domain_lro.Value;
                 Utilities.Log("Purchased domain " + domain.Data.Name);
                 Utilities.Print(domain);
@@ -125,7 +124,7 @@ namespace ManageFunctionAppWithDomainSsl
                     DomainId = domain.Id,
                     CustomHostNameDnsRecordType = CustomHostNameDnsRecordType.CName,
                 };
-                var bindings_lro = bindingsCollection.CreateOrUpdate(WaitUntil.Completed, Utilities.CreateRandomName("bindings-"), bindingsdata);
+                var bindings_lro =await bindingsCollection.CreateOrUpdateAsync(WaitUntil.Completed, Utilities.CreateRandomName("bindings-"), bindingsdata);
                 var bindings = bindings_lro.Value;
                 Utilities.Log("Finished binding http://" + websiteName + "." + domainName + " to app " + websiteName);
                 Utilities.Print(bindings);
