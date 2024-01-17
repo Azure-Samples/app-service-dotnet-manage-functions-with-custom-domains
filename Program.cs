@@ -1,14 +1,20 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using Microsoft.Azure.Management.AppService.Fluent;
-using Microsoft.Azure.Management.AppService.Fluent.Models;
-using Microsoft.Azure.Management.Fluent;
-using Microsoft.Azure.Management.ResourceManager.Fluent;
-using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
-using Microsoft.Azure.Management.Samples.Common;
+using Azure;
+using Azure.Core;
+using Azure.Identity;
+using Azure.ResourceManager;
+using Azure.ResourceManager.AppService;
+using Azure.ResourceManager.AppService.Models;
+using Azure.ResourceManager.Resources;
+using Azure.ResourceManager.Samples.Common;
+using Azure.ResourceManager.Sql;
+using Azure.ResourceManager.Sql.Models;
 using System;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace ManageFunctionAppWithDomainSsl
 {
@@ -26,13 +32,17 @@ namespace ManageFunctionAppWithDomainSsl
          *    - Upload a self-signed wildcard certificate
          *    - update both function apps to use the domain and the created wildcard SSL certificate
          */
-        public static void RunSample(IAzure azure)
+        public static async Task RunSample(ArmClient client)
         {
-            string app1Name       = SdkContext.RandomResourceName("webapp1-", 20);
-            string app2Name       = SdkContext.RandomResourceName("webapp2-", 20);
-            string rgName         = SdkContext.RandomResourceName("rgNEMV_", 24);
-            string domainName     = SdkContext.RandomResourceName("jsdkdemo-", 20) + ".com";
-            string certPassword   = Utilities.CreatePassword();
+            AzureLocation region  = AzureLocation.EastUS;
+            string websiteName     = Utilities.CreateRandomName("website-");
+            string planName       = Utilities.CreateRandomName("plan-");
+            string app1Name       = Utilities.CreateRandomName("webapp1-");
+            string app2Name       = Utilities.CreateRandomName("webapp2-");
+            string rgName         = Utilities.CreateRandomName("rgNEMV_");
+            string domainName     = Utilities.CreateRandomName("jsdkdemo-") + ".com";
+            var lro = await client.GetDefaultSubscription().GetResourceGroups().CreateOrUpdateAsync(Azure.WaitUntil.Completed, rgName, new ResourceGroupData(AzureLocation.EastUS));
+            var resourceGroup = lro.Value;
 
             try {
                 //============================================================
@@ -40,114 +50,92 @@ namespace ManageFunctionAppWithDomainSsl
 
                 Utilities.Log("Creating function app " + app1Name + "...");
 
-                IFunctionApp app1 = azure.AppServices.FunctionApps.Define(app1Name)
-                        .WithRegion(Region.USWest)
-                        .WithNewResourceGroup(rgName)
-                        .Create();
+                var webSiteCollection = resourceGroup.GetWebSites();
+                var webSiteData = new WebSiteData(region)
+                {
+                    SiteConfig = new SiteConfigProperties()
+                    {
+                        WindowsFxVersion = "PricingTier.StandardS1",
+                        NetFrameworkVersion = "NetFrameworkVersion.V4_6",
+                    }
+                };
+                var webSite_lro = await webSiteCollection.CreateOrUpdateAsync(Azure.WaitUntil.Completed, websiteName, webSiteData);
+                var webSite = webSite_lro.Value;
 
-                Utilities.Log("Created function app " + app1.Name);
-                Utilities.Print(app1);
+                var planCollection = resourceGroup.GetAppServicePlans();
+                var planData = new AppServicePlanData(region)
+                {
+                };
+                var planResource_lro = await planCollection.CreateOrUpdateAsync(Azure.WaitUntil.Completed, planName, planData);
+                var planResource = planResource_lro.Value;
+
+                SiteFunctionCollection functionAppCollection = webSite.GetSiteFunctions();
+                var functionData = new FunctionEnvelopeData()
+                {
+                };
+                var funtion_lro =await functionAppCollection.CreateOrUpdateAsync(Azure.WaitUntil.Completed, app1Name, functionData);
+                var function = funtion_lro.Value;
+
+                Utilities.Log("Created function app " + function.Data.Name);
+                Utilities.Print(function);
 
                 //============================================================
                 // Create a second function app with the same app service plan
 
                 Utilities.Log("Creating another function app " + app2Name + "...");
-                IFunctionApp app2 = azure.AppServices.FunctionApps.Define(app2Name)
-                        .WithRegion(Region.USWest)
-                        .WithExistingResourceGroup(rgName)
-                        .Create();
+                SiteFunctionCollection function2AppCollection = webSite.GetSiteFunctions();
+                var function2Data = new FunctionEnvelopeData()
+                {
+                };
+                var funtion2_lro =await function2AppCollection.CreateOrUpdateAsync(WaitUntil.Completed, app2Name, function2Data);
+                var function2 = funtion2_lro.Value;
 
-                Utilities.Log("Created function app " + app2.Name);
-                Utilities.Print(app2);
+                Utilities.Log("Created function app " + function2.Data.Name);
+                Utilities.Print(function);
 
                 //============================================================
                 // Purchase a domain (will be canceled for a full refund)
 
                 Utilities.Log("Purchasing a domain " + domainName + "...");
 
-                IAppServiceDomain domain = azure.AppServices.AppServiceDomains.Define(domainName)
-                        .WithExistingResourceGroup(rgName)
-                        .DefineRegistrantContact()
-                            .WithFirstName("Jon")
-                            .WithLastName("Doe")
-                            .WithEmail("jondoe@contoso.com")
-                            .WithAddressLine1("123 4th Ave")
-                            .WithCity("Redmond")
-                            .WithStateOrProvince("WA")
-                            .WithCountry(CountryISOCode.UnitedStates)
-                            .WithPostalCode("98052")
-                            .WithPhoneCountryCode(CountryPhoneCode.UnitedStates)
-                            .WithPhoneNumber("4258828080")
-                            .Attach()
-                        .WithDomainPrivacyEnabled(true)
-                        .WithAutoRenewEnabled(false)
-                        .Create();
-                Utilities.Log("Purchased domain " + domain.Name);
+                var domainCollection = resourceGroup.GetAppServiceDomains();
+                var domainData = new AppServiceDomainData(region)
+                {
+                    ContactRegistrant = new RegistrationContactInfo("jondoe@contoso.com", "Jon", "Doe", "4258828080")
+                    {
+                        AddressMailing = new RegistrationAddressInfo("123 4th Ave", "Redmond", "UnitedStates", "98052", "WA")
+                    },
+                    IsDomainPrivacyEnabled = true,
+                    IsAutoRenew = false
+                };
+                var domain_lro =await domainCollection.CreateOrUpdateAsync(WaitUntil.Completed, domainName, domainData);
+                var domain = domain_lro.Value;
+                Utilities.Log("Purchased domain " + domain.Data.Name);
                 Utilities.Print(domain);
 
                 //============================================================
                 // Bind domain to function app 1
 
-                Utilities.Log("Binding http://" + app1Name + "." + domainName + " to function app " + app1Name + "...");
+                Utilities.Log("Binding http://" + websiteName + "." + domainName + " to app " + websiteName + "...");
 
-                app1 = app1.Update()
-                        .DefineHostnameBinding()
-                            .WithAzureManagedDomain(domain)
-                            .WithSubDomain(app1Name)
-                            .WithDnsRecordType(CustomHostNameDnsRecordType.CName)
-                            .Attach()
-                        .Apply();
+                var bindingsCollection = webSite.GetSiteHostNameBindings();
+                var bindingsdata = new HostNameBindingData()
+                {
+                    DomainId = domain.Id,
+                    CustomHostNameDnsRecordType = CustomHostNameDnsRecordType.CName,
+                };
+                var bindings_lro =await bindingsCollection.CreateOrUpdateAsync(WaitUntil.Completed, Utilities.CreateRandomName("bindings-"), bindingsdata);
+                var bindings = bindings_lro.Value;
+                Utilities.Log("Finished binding http://" + websiteName + "." + domainName + " to app " + websiteName);
+                Utilities.Print(bindings);
 
-                Utilities.Log("Finished binding http://" + app1Name + "." + domainName + " to function app " + app1Name);
-                Utilities.Print(app1);
-
-                //============================================================
-                // Create a self-singed SSL certificate
-                var pfxPath = "webapp_" + nameof(ManageFunctionAppWithDomainSsl).ToLower() + ".pfx";
-
-                Utilities.Log("Creating a self-signed certificate " + pfxPath + "...");
-
-                Utilities.CreateCertificate(domainName, pfxPath, CertificatePassword);
-
-                Utilities.Log("Created self-signed certificate " + pfxPath);
-
-                //============================================================
-                // Bind domain to function app 2 and turn on wild card SSL for both
-
-                Utilities.Log("Binding https://" + app1Name + "." + domainName + " to function app " + app1Name + "...");
-
-                app1 = app1.Update()
-                        .WithManagedHostnameBindings(domain, app1Name)
-                        .DefineSslBinding()
-                            .ForHostname(app1Name + "." + domainName)
-                            .WithPfxCertificateToUpload(Path.Combine(Utilities.ProjectPath, "Asset", pfxPath), certPassword)
-                            .WithSniBasedSsl()
-                            .Attach()
-                        .Apply();
-
-                Utilities.Log("Finished binding http://" + app1Name + "." + domainName + " to function app " + app1Name);
-                Utilities.Print(app1);
-
-                Utilities.Log("Binding https://" + app2Name + "." + domainName + " to function app " + app2Name + "...");
-
-                app2 = app2.Update()
-                        .WithManagedHostnameBindings(domain, app2Name)
-                        .DefineSslBinding()
-                            .ForHostname(app2Name + "." + domainName)
-                            .WithPfxCertificateToUpload(Path.Combine(Utilities.ProjectPath, "Asset", pfxPath), certPassword)
-                            .WithSniBasedSsl()
-                            .Attach()
-                        .Apply();
-
-                Utilities.Log("Finished binding http://" + app2Name + "." + domainName + " to function app " + app2Name);
-                Utilities.Print(app2);
             }
             finally
             {
                 try
                 {
                     Utilities.Log("Deleting Resource Group: " + rgName);
-                    azure.ResourceGroups.DeleteByName(rgName);
+                    await resourceGroup.DeleteAsync(WaitUntil.Completed);
                     Utilities.Log("Deleted Resource Group: " + rgName);
                 }
                 catch (NullReferenceException)
@@ -161,24 +149,23 @@ namespace ManageFunctionAppWithDomainSsl
             }
         }
 
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             try
             {
                 //=================================================================
                 // Authenticate
-                var credentials = SdkContext.AzureCredentialsFactory.FromFile(Environment.GetEnvironmentVariable("AZURE_AUTH_LOCATION"));
-
-                var azure = Azure
-                    .Configure()
-                    .WithLogLevel(HttpLoggingDelegatingHandler.Level.Basic)
-                    .Authenticate(credentials)
-                    .WithDefaultSubscription();
+                var clientId = Environment.GetEnvironmentVariable("CLIENT_ID");
+                var clientSecret = Environment.GetEnvironmentVariable("CLIENT_SECRET");
+                var tenantId = Environment.GetEnvironmentVariable("TENANT_ID");
+                var subscription = Environment.GetEnvironmentVariable("SUBSCRIPTION_ID");
+                ClientSecretCredential credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
+                ArmClient client = new ArmClient(credential, subscription);
 
                 // Print selected subscription
-                Utilities.Log("Selected subscription: " + azure.SubscriptionId);
+                Utilities.Log("Selected subscription: " + client.GetSubscriptions().Id);
 
-                RunSample(azure);
+                await RunSample(client);
             }
             catch (Exception e)
             {
